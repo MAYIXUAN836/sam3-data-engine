@@ -40,8 +40,8 @@ api.create_repo(repo_id=repo_id, repo_type="dataset", private=True, exist_ok=Tru
 api.upload_large_folder(
     repo_id=repo_id,
     repo_type="dataset",
-    folder_path=str(dataset_dir),
-    path_in_repo="dataset",
+    folder_path=str(root_dir),
+    allow_patterns=["dataset/**"],
 )
 
 print(f"[hf] upload completed: {repo_id}")
