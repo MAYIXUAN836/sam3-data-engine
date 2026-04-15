@@ -13,13 +13,12 @@ if [[ ! -d "${DATASET_DIR}" ]]; then
     exit 1
 fi
 
-if [[ -z "${HF_TOKEN}" ]]; then
-    echo "❌ HF_TOKEN is empty. Export HF_TOKEN before running."
-    exit 1
-fi
-
 echo "📤 Uploading ${DATASET_DIR} to Hugging Face dataset repo: ${DATASET_HF_REPO}"
 echo "   This can take a long time for large files."
+
+if [[ -z "${HF_TOKEN}" ]]; then
+    echo "ℹ️ HF_TOKEN not provided. Will use local huggingface-cli login session if available."
+fi
 
 ROOT_DIR_ENV="${ROOT_DIR}" \
 DATASET_HF_REPO_ENV="${DATASET_HF_REPO}" \
