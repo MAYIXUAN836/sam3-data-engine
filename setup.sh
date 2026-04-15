@@ -10,6 +10,7 @@ PYTHON_VERSION="${PYTHON_VERSION:-3.12}"
 TORCH_VERSION="${TORCH_VERSION:-2.7.0}"
 DOWNLOAD_WEIGHTS="${DOWNLOAD_WEIGHTS:-1}"
 VERIFY_DATASETS="${VERIFY_DATASETS:-1}"
+SETUP_DATASETS="${SETUP_DATASETS:-1}"
 HF_REPO="${HF_REPO:-YixuanMa/sam3-data-engine-checkpoints}"
 DOWNLOAD_BASE_WEIGHTS="${DOWNLOAD_BASE_WEIGHTS:-1}"
 DOWNLOAD_FINETUNED_EXP5="${DOWNLOAD_FINETUNED_EXP5:-1}"
@@ -27,6 +28,7 @@ echo "  Python: ${PYTHON_VERSION}"
 echo "  PyTorch: ${TORCH_VERSION}"
 echo "  Download Weights: ${DOWNLOAD_WEIGHTS}"
 echo "  Verify Datasets: ${VERIFY_DATASETS}"
+echo "  Setup Datasets: ${SETUP_DATASETS}"
 echo "  Download Base Weights: ${DOWNLOAD_BASE_WEIGHTS}"
 echo "  Download Finetuned exp5: ${DOWNLOAD_FINETUNED_EXP5}"
 
@@ -133,8 +135,15 @@ if [[ "${VERIFY_DATASETS}" == "1" ]]; then
         fi
     done
     if [[ "${missing}" == "1" ]]; then
-        echo "ℹ️ These datasets are not redistributed in this repo. Place them under ${ROOT_DIR}/dataset or mount them before training."
+        echo "ℹ️ These datasets are not redistributed in this repo. Use the download_datasets.sh script for help."
     fi
+fi
+
+# Optional: Setup/verify datasets
+if [[ "${SETUP_DATASETS}" == "1" ]] && [[ -f "${ROOT_DIR}/download_datasets.sh" ]]; then
+    echo ""
+    echo "📋 Running dataset verification & setup assistant..."
+    bash "${ROOT_DIR}/download_datasets.sh"
 fi
 
 echo ""
@@ -154,6 +163,8 @@ echo "Optional: Download only finetuned exp5 checkpoints"
 echo "  DOWNLOAD_BASE_WEIGHTS=0 DOWNLOAD_FINETUNED_EXP5=1 bash setup.sh"
 echo "Optional: Download only base checkpoints"
 echo "  DOWNLOAD_BASE_WEIGHTS=1 DOWNLOAD_FINETUNED_EXP5=0 bash setup.sh"
+echo "Optional: Skip dataset setup"
+echo "  SETUP_DATASETS=0 bash setup.sh"
 echo "Optional: Disable dataset checks"
 echo "  VERIFY_DATASETS=0 bash setup.sh"
 echo ""
