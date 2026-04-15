@@ -4,11 +4,11 @@
 
 ### 1. 克隆仓库
 ```bash
-git clone git@github.com:YOUR_NAME/sam3-data-engine.git
+git clone git@github.com:MAYIXUAN836/sam3-data-engine.git
 cd sam3-data-engine
 ```
 
-### 2. 一键装环境（含 PyTorch）
+### 2. 一键装环境（含 PyTorch、基础权重+exp5微调权重下载与数据校验）
 ```bash
 bash setup.sh
 ```
@@ -80,8 +80,20 @@ PYTHON_VERSION=3.11 bash setup.sh
 # 自定义 PyTorch 版本
 TORCH_VERSION=2.6.0 bash setup.sh
 
-# 立刻下载权重（训练完成后）
+# 立刻下载权重（默认开启）
 DOWNLOAD_WEIGHTS=1 bash setup.sh
+
+# 自定义 HF 仓库（默认 YixuanMa/sam3-data-engine-checkpoints）
+HF_REPO=YixuanMa/sam3-data-engine-checkpoints bash setup.sh
+
+# 只下载 exp5 微调权重
+DOWNLOAD_BASE_WEIGHTS=0 DOWNLOAD_FINETUNED_EXP5=1 bash setup.sh
+
+# 只下载基础权重
+DOWNLOAD_BASE_WEIGHTS=1 DOWNLOAD_FINETUNED_EXP5=0 bash setup.sh
+
+# 关闭数据校验
+VERIFY_DATASETS=0 bash setup.sh
 ```
 
 ## 训练

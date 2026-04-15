@@ -8,14 +8,27 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_NAME="${ENV_NAME:-sam3}"
 PYTHON_VERSION="${PYTHON_VERSION:-3.12}"
 TORCH_VERSION="${TORCH_VERSION:-2.7.0}"
-DOWNLOAD_WEIGHTS="${DOWNLOAD_WEIGHTS:-0}"
-HF_REPO="${HF_REPO:-YOUR_NAME/sam3-data-engine-checkpoints}"
+DOWNLOAD_WEIGHTS="${DOWNLOAD_WEIGHTS:-1}"
+VERIFY_DATASETS="${VERIFY_DATASETS:-1}"
+HF_REPO="${HF_REPO:-YixuanMa/sam3-data-engine-checkpoints}"
+DOWNLOAD_BASE_WEIGHTS="${DOWNLOAD_BASE_WEIGHTS:-1}"
+DOWNLOAD_FINETUNED_EXP5="${DOWNLOAD_FINETUNED_EXP5:-1}"
+SAM3_CKPT_FILES=("sam3.pt" "model.safetensors")
+EXP5_CKPT_FILES=(
+    "experiments/exp5/checkpoints/best_train_loss.pt"
+    "experiments/exp5/checkpoints/latest.pt"
+    "experiments/exp5/config.yaml"
+    "experiments/exp5/config_resolved.yaml"
+)
 
 echo "📦 Setting up Sam3_data_engine environment..."
 echo "  Environment: ${ENV_NAME}"
 echo "  Python: ${PYTHON_VERSION}"
 echo "  PyTorch: ${TORCH_VERSION}"
 echo "  Download Weights: ${DOWNLOAD_WEIGHTS}"
+echo "  Verify Datasets: ${VERIFY_DATASETS}"
+echo "  Download Base Weights: ${DOWNLOAD_BASE_WEIGHTS}"
+echo "  Download Finetuned exp5: ${DOWNLOAD_FINETUNED_EXP5}"
 
 # Load conda
 source /home/projectx/miniconda/etc/profile.d/conda.sh || {
@@ -46,19 +59,82 @@ pip install "torch==${TORCH_VERSION}" torchvision torchaudio --index-url https:/
 echo "📥 Installing sam3 package with training dependencies..."
 pip install -e "${ROOT_DIR}/sam3[train]"
 
+# Ensure asset directories exist for downloaded checkpoints.
+mkdir -p "${ROOT_DIR}/checkpoints"
+
 # Optional: Download model weights from Hugging Face
 if [[ "${DOWNLOAD_WEIGHTS}" == "1" ]]; then
     echo "📥 Downloading model weights from ${HF_REPO}..."
-    mkdir -p "${ROOT_DIR}/checkpoints"
-    
-    if ! python -c "import huggingface_hub" 2>/dev/null; then
-        echo "⚠️ huggingface_hub not available, skipping weight download"
-    else
-        # Replace with actual checkpoint filenames when available
-        echo "ℹ️ No checkpoints defined yet. Update setup.sh when checkpoints are available."
-    fi
+    ROOT_DIR_ENV="${ROOT_DIR}" \
+    HF_REPO_ENV="${HF_REPO}" \
+    DOWNLOAD_BASE_WEIGHTS_ENV="${DOWNLOAD_BASE_WEIGHTS}" \
+    DOWNLOAD_FINETUNED_EXP5_ENV="${DOWNLOAD_FINETUNED_EXP5}" \
+    /home/projectx/miniconda/bin/python - <<'PYTHON_EOF'
+from pathlib import Path
+import os
+from huggingface_hub import hf_hub_download
+
+repo_id = os.environ["HF_REPO_ENV"]
+root_dir = Path(os.environ["ROOT_DIR_ENV"])
+download_base = os.environ.get("DOWNLOAD_BASE_WEIGHTS_ENV", "1") == "1"
+download_exp5 = os.environ.get("DOWNLOAD_FINETUNED_EXP5_ENV", "1") == "1"
+
+base_out_dir = root_dir / "checkpoints"
+base_out_dir.mkdir(parents=True, exist_ok=True)
+
+if download_base:
+    for filename in ("sam3.pt", "model.safetensors"):
+        print(f"[hf] downloading {filename} from {repo_id}")
+        downloaded = hf_hub_download(
+            repo_id=repo_id,
+            repo_type="model",
+            filename=filename,
+            local_dir=str(base_out_dir),
+            local_dir_use_symlinks=False,
+        )
+        print(f"[hf] ready: {downloaded}")
+
+if download_exp5:
+    exp5_files = (
+        "experiments/exp5/checkpoints/best_train_loss.pt",
+        "experiments/exp5/checkpoints/latest.pt",
+        "experiments/exp5/config.yaml",
+        "experiments/exp5/config_resolved.yaml",
+    )
+    for filename in exp5_files:
+        target_dir = root_dir / Path(filename).parent
+        target_dir.mkdir(parents=True, exist_ok=True)
+        print(f"[hf] downloading {filename} from {repo_id}")
+        downloaded = hf_hub_download(
+            repo_id=repo_id,
+            repo_type="model",
+            filename=filename,
+            local_dir=str(root_dir),
+            local_dir_use_symlinks=False,
+        )
+        print(f"[hf] ready: {downloaded}")
+
+if not download_base and not download_exp5:
+    print("[hf] skipped all checkpoints by config")
+PYTHON_EOF
 else
     echo "⏭️ Skipping weight download (DOWNLOAD_WEIGHTS=0)"
+fi
+
+if [[ "${VERIFY_DATASETS}" == "1" ]]; then
+    echo "🔎 Verifying dataset layout..."
+    missing=0
+    for required in "${ROOT_DIR}/dataset/Golden_set" "${ROOT_DIR}/dataset/us3d-500" "${ROOT_DIR}/dataset/DFC18"; do
+        if [[ -d "${required}" ]]; then
+            echo "✓ ${required##*/} present"
+        else
+            echo "⚠️ ${required##*/} missing"
+            missing=1
+        fi
+    done
+    if [[ "${missing}" == "1" ]]; then
+        echo "ℹ️ These datasets are not redistributed in this repo. Place them under ${ROOT_DIR}/dataset or mount them before training."
+    fi
 fi
 
 echo ""
@@ -74,4 +150,10 @@ echo "  python sam3/train.py -c sam3/train/configs/your_config.yaml"
 echo ""
 echo "Optional: Download weights after setup"
 echo "  DOWNLOAD_WEIGHTS=1 bash setup.sh"
+echo "Optional: Download only finetuned exp5 checkpoints"
+echo "  DOWNLOAD_BASE_WEIGHTS=0 DOWNLOAD_FINETUNED_EXP5=1 bash setup.sh"
+echo "Optional: Download only base checkpoints"
+echo "  DOWNLOAD_BASE_WEIGHTS=1 DOWNLOAD_FINETUNED_EXP5=0 bash setup.sh"
+echo "Optional: Disable dataset checks"
+echo "  VERIFY_DATASETS=0 bash setup.sh"
 echo ""
