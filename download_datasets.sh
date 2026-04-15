@@ -7,7 +7,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+PROJECT_ROOT="${SCRIPT_DIR}"
 DATASET_DIR="${PROJECT_ROOT}/dataset"
 DOWNLOAD_US3D="${DOWNLOAD_US3D:-1}"
 DOWNLOAD_DFC18="${DOWNLOAD_DFC18:-1}"
@@ -27,7 +27,7 @@ echo ""
 # ============================================================
 verify_datasets() {
     echo "🔍 Verifying dataset structure..."
-    local all_ok=1
+    local has_issue=0
     
     # Golden_set
     if [[ -d "${DATASET_DIR}/Golden_set" ]]; then
@@ -35,11 +35,11 @@ verify_datasets() {
             echo "  ✓ Golden_set (complete)"
         else
             echo "  ⚠️  Golden_set (incomplete - missing subdirectories)"
-            all_ok=0
+            has_issue=1
         fi
     else
         echo "  ❌ Golden_set (missing)"
-        all_ok=0
+        has_issue=1
     fi
     
     # US3D-500
@@ -48,11 +48,11 @@ verify_datasets() {
             echo "  ✓ US3D-500 (present)"
         else
             echo "  ⚠️  US3D-500 (empty or incomplete)"
-            all_ok=0
+            has_issue=1
         fi
     else
         echo "  ❌ US3D-500 (missing)"
-        all_ok=0
+        has_issue=1
     fi
     
     # DFC18
@@ -61,14 +61,14 @@ verify_datasets() {
             echo "  ✓ DFC18 (present)"
         else
             echo "  ⚠️  DFC18 (empty or incomplete)"
-            all_ok=0
+            has_issue=1
         fi
     else
         echo "  ❌ DFC18 (missing)"
-        all_ok=0
+        has_issue=1
     fi
     
-    return $all_ok
+    return "${has_issue}"
 }
 
 # ============================================================

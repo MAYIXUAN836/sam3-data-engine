@@ -11,6 +11,8 @@ TORCH_VERSION="${TORCH_VERSION:-2.7.0}"
 DOWNLOAD_WEIGHTS="${DOWNLOAD_WEIGHTS:-1}"
 VERIFY_DATASETS="${VERIFY_DATASETS:-1}"
 SETUP_DATASETS="${SETUP_DATASETS:-1}"
+DOWNLOAD_DATASETS="${DOWNLOAD_DATASETS:-0}"
+DATASET_HF_REPO="${DATASET_HF_REPO:-YixuanMa/sam3-data-engine-dataset}"
 HF_REPO="${HF_REPO:-YixuanMa/sam3-data-engine-checkpoints}"
 DOWNLOAD_BASE_WEIGHTS="${DOWNLOAD_BASE_WEIGHTS:-1}"
 DOWNLOAD_FINETUNED_EXP5="${DOWNLOAD_FINETUNED_EXP5:-1}"
@@ -27,6 +29,8 @@ echo "  Environment: ${ENV_NAME}"
 echo "  Python: ${PYTHON_VERSION}"
 echo "  PyTorch: ${TORCH_VERSION}"
 echo "  Download Weights: ${DOWNLOAD_WEIGHTS}"
+echo "  Download Datasets from HF: ${DOWNLOAD_DATASETS}"
+echo "  Dataset HF Repo: ${DATASET_HF_REPO}"
 echo "  Verify Datasets: ${VERIFY_DATASETS}"
 echo "  Setup Datasets: ${SETUP_DATASETS}"
 echo "  Download Base Weights: ${DOWNLOAD_BASE_WEIGHTS}"
@@ -123,6 +127,32 @@ else
     echo "⏭️ Skipping weight download (DOWNLOAD_WEIGHTS=0)"
 fi
 
+# Optional: Download dataset snapshot from Hugging Face dataset repo.
+if [[ "${DOWNLOAD_DATASETS}" == "1" ]]; then
+    echo "📥 Downloading dataset snapshot from ${DATASET_HF_REPO}..."
+    ROOT_DIR_ENV="${ROOT_DIR}" \
+    DATASET_HF_REPO_ENV="${DATASET_HF_REPO}" \
+    /home/projectx/miniconda/bin/python - <<'PYTHON_EOF'
+import os
+from huggingface_hub import snapshot_download
+
+root_dir = os.environ["ROOT_DIR_ENV"]
+repo_id = os.environ["DATASET_HF_REPO_ENV"]
+
+snapshot_download(
+    repo_id=repo_id,
+    repo_type="dataset",
+    local_dir=root_dir,
+    local_dir_use_symlinks=False,
+    resume_download=True,
+)
+
+print(f"[hf] dataset snapshot synced from {repo_id} to {root_dir}")
+PYTHON_EOF
+else
+    echo "⏭️ Skipping dataset download from HF (DOWNLOAD_DATASETS=0)"
+fi
+
 if [[ "${VERIFY_DATASETS}" == "1" ]]; then
     echo "🔎 Verifying dataset layout..."
     missing=0
@@ -159,6 +189,8 @@ echo "  python sam3/train.py -c sam3/train/configs/your_config.yaml"
 echo ""
 echo "Optional: Download weights after setup"
 echo "  DOWNLOAD_WEIGHTS=1 bash setup.sh"
+echo "Optional: Download dataset from Hugging Face dataset repo"
+echo "  DOWNLOAD_DATASETS=1 DATASET_HF_REPO=YixuanMa/sam3-data-engine-dataset bash setup.sh"
 echo "Optional: Download only finetuned exp5 checkpoints"
 echo "  DOWNLOAD_BASE_WEIGHTS=0 DOWNLOAD_FINETUNED_EXP5=1 bash setup.sh"
 echo "Optional: Download only base checkpoints"
